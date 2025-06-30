@@ -127,6 +127,26 @@ const swapSchema = new mongoose.Schema(
         default: "",
       },
     },
+
+    // Position tracking fields for ratio-based copy trading
+    swapType: {
+      type: String,
+      enum: ["entry", "exit"],
+      default: "entry",
+    },
+    relatedEntrySwapId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Swap",
+      default: null,
+    },
+    traderTokenBalance: {
+      type: String,
+      default: "0",
+    },
+    myPositionValue: {
+      type: String,
+      default: "0",
+    },
   },
   {
     timestamps: true, // Adds createdAt and updatedAt fields

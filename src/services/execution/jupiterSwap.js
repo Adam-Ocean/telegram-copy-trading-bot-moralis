@@ -24,8 +24,13 @@ const executeJupiterSwap = async (swap) => {
     const fromToken = swap.tokenIn;
     const toToken = swap.tokenOut;
 
+    // Use calculated amount from position tracker if available, otherwise use original amount
+    const tradeAmount = swap.myPositionValue && swap.myPositionValue !== "0" 
+      ? swap.myPositionValue 
+      : fromToken.amount;
+
     console.log(
-      `Swapping ${fromToken.amount} ${fromToken.symbol} to ${toToken.symbol}`
+      `Swapping ${tradeAmount} ${fromToken.symbol} to ${toToken.symbol} (ratio-based amount)`
     );
 
     // Check if the token addresses are valid
@@ -36,11 +41,18 @@ const executeJupiterSwap = async (swap) => {
     }
 
     // Convert amount to the correct format (with decimals)
+      
     const inputAmount = Math.floor(
-      parseFloat(fromToken.amount) * Math.pow(10, fromToken.decimals)
+      parseFloat(tradeAmount) * Math.pow(10, fromToken.decimals)
     );
     if (isNaN(inputAmount) || inputAmount <= 0) {
-      throw new Error(`Invalid amount: ${fromToken.amount}`);
+      throw new Error(`Invalid amount: ${tradeAmount}`);
+    }
+    
+    console.log(`Using calculated trade amount: ${tradeAmount} ${fromToken.symbol} (original: ${fromToken.amount})`);
+    console.log(`Swap type: ${swap.swapType || 'entry'}`);
+    if (swap.relatedEntrySwapId) {
+      console.log(`Related entry swap: ${swap.relatedEntrySwapId}`);
     }
 
     // Check wallet balance

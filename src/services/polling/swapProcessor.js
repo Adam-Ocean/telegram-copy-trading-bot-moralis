@@ -10,6 +10,7 @@ const {
   formatSwapNotification,
   formatErrorNotification,
 } = require("../../telegram/messages");
+const { detectSwapType, calculateTradeAmount, getTokenBalance } = require("../positionTracker");
 require("dotenv").config();
 
 let isRunning = false;
@@ -181,6 +182,32 @@ const processSwaps = async () => {
 
         if (!chain) {
           throw new Error(`Chain ${swap.sourceChain} not found`);
+        }
+
+        // For Solana swaps, add position tracking logic
+        if (chain.type === "solana") {
+          try {
+            // Detect swap type and calculate appropriate amounts
+            const positionInfo = await detectSwapType(swap, swap.sourceWallet);
+            const tradeAmount = await calculateTradeAmount(swap, positionInfo);
+            
+            // Update swap with position tracking info
+            swap.swapType = positionInfo.swapType;
+            swap.relatedEntrySwapId = positionInfo.relatedEntrySwapId;
+            swap.traderTokenBalance = await getTokenBalance(swap.sourceWallet, swap.tokenIn.address);
+            swap.myPositionValue = tradeAmount.amount;
+            
+            // Save the updated swap info
+            await swap.save();
+            
+            console.log(`Swap type: ${positionInfo.swapType}, Trade amount: ${tradeAmount.amount}`);
+            if (positionInfo.exitRatio) {
+              console.log(`Exit ratio: ${positionInfo.exitRatio}x`);
+            }
+          } catch (positionError) {
+            console.error("Error in position tracking:", positionError);
+            // Continue with original swap if position tracking fails
+          }
         }
 
         // Execute the swap based on chain type
